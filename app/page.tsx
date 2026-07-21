@@ -1,65 +1,74 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import { ModuleType, Sidebar } from './components/layout/Sidebar';
+import { Header } from './components/layout/Header';
+import { LoginModal } from './components/modules/Auth/LoginModal';
+import { DashboardModule } from './components/modules/Dashboard/DashboardModule';
+import { CompaniesModule } from './components/modules/Companies/CompaniesModule';
+import { ContactsModule } from './components/modules/Contacts/ContactsModule';
+import { DealsModule } from './components/modules/Deals/DealsModule';
+import { ActivitiesModule } from './components/modules/Activities/ActivitiesModule';
+import { NotesModule } from './components/modules/Notes/NotesModule';
+import { ProductsQuotesModule } from './components/modules/Quotes/ProductsQuotesModule';
+import { TicketsModule } from './components/modules/Tickets/TicketsModule';
+import { CampaignsModule } from './components/modules/Campaigns/CampaignsModule';
+import { TagsModule } from './components/modules/Tags/TagsModule';
+import { WhatsAppModule } from './components/modules/WhatsApp/WhatsAppModule';
 
 export default function Home() {
+  const [activeModule, setActiveModule] = useState<ModuleType>('dashboard');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const renderModule = () => {
+    switch (activeModule) {
+      case 'dashboard':
+        return <DashboardModule />;
+      case 'companies':
+        return <CompaniesModule />;
+      case 'contacts':
+        return <ContactsModule />;
+      case 'deals':
+        return <DealsModule />;
+      case 'activities':
+        return <ActivitiesModule />;
+      case 'notes':
+        return <NotesModule />;
+      case 'products':
+      case 'quotes':
+        return <ProductsQuotesModule />;
+      case 'tickets':
+        return <TicketsModule />;
+      case 'campaigns':
+        return <CampaignsModule />;
+      case 'tags':
+        return <TagsModule />;
+      case 'whatsapp':
+        return <WhatsAppModule />;
+      default:
+        return <DashboardModule />;
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex h-screen bg-[#090d16] text-slate-100 overflow-hidden font-sans">
+      {/* Sidebar */}
+      <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
+
+      {/* Main Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#090d16]">
+        <Header
+          onOpenLogin={() => setShowLoginModal(true)}
+          title={activeModule.replace('_', ' ')}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto bg-[#090d16]">
+          {renderModule()}
+        </main>
+      </div>
+
+      {/* Authentication Modal */}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 }
