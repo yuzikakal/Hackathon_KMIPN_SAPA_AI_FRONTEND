@@ -170,7 +170,15 @@ export interface Notification {
 }
 
 export interface WhatsAppSession {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'PAIRING' | string;
+  id?: number;
+  name?: string;
+  sender_number?: string | null;
+  wa_status?: string;
+  wa_qr?: string | null;
+  wa_paired_at?: string | null;
+  updated_at?: string | null;
+  // Convenience aliases used by some UI components
+  status?: 'CONNECTED' | 'DISCONNECTED' | 'PAIRING' | string;
   phone?: string | null;
 }
 
@@ -180,6 +188,9 @@ export interface WhatsAppMessage {
   message: string;
   status: 'sent' | 'failed' | string;
   sent_at: string;
+  wa_message_id?: string | null;
+  error_message?: string | null;
+  created_at?: string;
 }
 
 export interface RealtimeEvent {

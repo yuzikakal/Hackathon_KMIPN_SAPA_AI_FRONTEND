@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { useRealtime } from '../../context/RealtimeContext';
-import { FiSearch, FiLogOut, FiUser, FiZap } from 'react-icons/fi';
+import { FiSearch, FiLogOut } from 'react-icons/fi';
 
 interface HeaderProps {
-  onOpenLogin: () => void;
   title: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenLogin, title }) => {
+export const Header: React.FC<HeaderProps> = ({ title }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { wsStatus } = useRealtime();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
@@ -36,28 +34,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, title }) => {
 
       {/* Right User & Status Tools */}
       <div className="flex items-center gap-4">
-        {/* WebSocket Real-time Status Badge */}
-        <div
-          className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium border ${
-            wsStatus === 'connected'
-              ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
-              : wsStatus === 'connecting'
-              ? 'bg-amber-950/40 text-amber-400 border-amber-800/60'
-              : 'bg-slate-800/60 text-slate-400 border-slate-700'
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              wsStatus === 'connected'
-                ? 'bg-emerald-500 animate-pulse'
-                : wsStatus === 'connecting'
-                ? 'bg-amber-500 animate-bounce'
-                : 'bg-slate-400'
-            }`}
-          />
-          <span className="capitalize">{wsStatus === 'connected' ? 'WS Live' : wsStatus}</span>
-        </div>
-
         {/* User Account / Login Button */}
         {isAuthenticated && user ? (
           <div className="relative">
@@ -97,12 +73,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, title }) => {
             )}
           </div>
         ) : (
-          <button
-            onClick={onOpenLogin}
+          <Link
+            href="/login"
             className="astryx-btn-primary text-xs px-3.5 py-1.5"
           >
             Sign In
-          </button>
+          </Link>
         )}
       </div>
     </header>

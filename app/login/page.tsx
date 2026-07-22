@@ -1,23 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
-import { apiFetch } from '../../../lib/api';
-import { User } from '../../../types';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
+import { User } from '../types';
+import { FiAlertCircle } from 'react-icons/fi';
 
-interface LoginModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+export default function LoginPage() {
+  const { login, isAuthenticated } = useAuth();
+  const router = useRouter();
 
-export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { login } = useAuth();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
       if (data && data.token && data.user) {
         login(data.token, data.user);
-        onClose();
+        router.push('/dashboard');
       } else {
         setErrorMsg('Unexpected response from authentication server.');
       }
@@ -40,7 +44,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       setErrorMsg(
         err instanceof Error
           ? err.message
-          : 'Authentication failed. Please check the server and your credentials.'
+          : 'Authentication failed. Please check the backend server and your credentials.'
       );
     } finally {
       setLoading(false);
@@ -48,28 +52,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white text-sm font-bold"
-        >
-          ✕
-        </button>
-
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-sm">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex items-center justify-center p-4 font-sans">
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-8 relative">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold flex items-center justify-center text-xl shadow-md shadow-blue-500/20">
             S
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Sign In to SAPA AI</h3>
-            <p className="text-xs text-slate-400">Access real-time CRM & WhatsApp automation</p>
+            <h1 className="text-xl font-bold text-white">Sign In to SAPA AI</h1>
+            <p className="text-xs text-slate-400">Real-time CRM & WhatsApp automation</p>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="mb-4 p-3 bg-red-950/40 text-red-400 text-xs rounded-lg border border-red-900/50">
-            {errorMsg}
+          <div className="mb-4 flex items-start gap-2 p-3 bg-red-950/40 text-red-400 text-xs rounded-lg border border-red-900/50">
+            <FiAlertCircle className="mt-0.5 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -103,7 +101,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="text-xs text-slate-400 bg-blue-950/20 p-2.5 rounded-lg border border-blue-900/30">
-            💡 Default Seeded Credentials: <br />
+            Default credentials:{' '}
             <span className="font-mono text-[11px] text-blue-400 font-bold">admin / admin123</span>
           </div>
 
@@ -115,7 +113,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="mt-6 text-center text-xs text-slate-500">
+          <Link href="/" className="text-blue-400 hover:underline">
+            ← Back to landing page
+          </Link>
+        </div>
       </div>
     </div>
   );
-};
+}

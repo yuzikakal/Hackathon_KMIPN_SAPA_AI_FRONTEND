@@ -1,21 +1,7 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { useRealtime } from '../../../context/RealtimeContext';
-import { RealtimeEvent } from '../../../types';
+import React from 'react';
 import { FiDollarSign, FiBriefcase, FiUsers, FiMessageSquare, FiZap, FiArrowRight } from 'react-icons/fi';
 
 export const DashboardModule: React.FC = () => {
-  const { subscribe } = useRealtime();
-  const [liveEvents, setLiveEvents] = useState<RealtimeEvent[]>([]);
-
-  useEffect(() => {
-    const unsubscribe = subscribe((event) => {
-      setLiveEvents((prev) => [event, ...prev.slice(0, 19)]);
-    });
-
-    return () => unsubscribe();
-  }, [subscribe]);
 
   const stats = [
     { label: 'Total Revenue', value: 'IDR 150.000.000', change: '+12.5%', icon: <FiDollarSign />, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
@@ -90,56 +76,6 @@ export const DashboardModule: React.FC = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Real-time WebSocket Event Stream */}
-        <div className="astryx-card p-6 bg-[#111827] flex flex-col h-full">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-base text-white flex items-center gap-2">
-              <FiZap className="text-amber-400" />
-              <span>Live WS Stream</span>
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-            </h3>
-            <span className="text-xs text-slate-400">{liveEvents.length} events</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto max-h-72 space-y-2.5 pr-1">
-            {liveEvents.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
-                Waiting for real-time WebSocket change events...
-              </div>
-            ) : (
-              liveEvents.map((evt, index) => (
-                <div
-                  key={index}
-                  className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800 text-xs flex items-center justify-between animate-fadeIn"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        evt.action === 'created'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
-                          : evt.action === 'updated'
-                          ? 'bg-blue-950 text-blue-400 border border-blue-800/60'
-                          : 'bg-red-950 text-red-400 border border-red-800/60'
-                      }`}
-                    >
-                      {evt.action}
-                    </span>
-                    <span className="font-semibold text-slate-200 capitalize">
-                      {evt.entity.replace('_', ' ')} #{evt.id}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400">
-                    {new Date(evt.timestamp || Date.now()).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))
-            )}
           </div>
         </div>
       </div>

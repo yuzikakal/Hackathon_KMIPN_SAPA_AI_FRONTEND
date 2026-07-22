@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
-import { apiFetch, getAuthToken, removeAuthToken, setAuthToken } from '../lib/api';
+import { apiFetch, getAuthToken, getStoredUser, removeAuthToken, removeStoredUser, setAuthToken, setStoredUser } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -31,25 +31,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const storedToken = getAuthToken();
+    const storedUser = getStoredUser();
     if (storedToken) {
       setTokenState(storedToken);
-      // Fetch initial current user profile or mock default admin session
-      setUser({
-        id: 1,
-        username: 'admin',
-        full_name: 'System Admin',
-        role: 'admin',
-        email: 'admin@sapaai.com',
-        phone: '+628123456789',
-        photo_url: null,
-        is_active: true,
-      });
+      if (storedUser) {
+        setUser(storedUser);
+      }
     }
     setIsLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
     setAuthToken(newToken);
+    setStoredUser(newUser);
     setTokenState(newToken);
     setUser(newUser);
   };
@@ -63,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     removeAuthToken();
+    removeStoredUser();
     setTokenState(null);
     setUser(null);
   };

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import {
   FiGrid,
   FiBriefcase,
@@ -14,12 +15,14 @@ import {
   FiSend,
   FiTag,
   FiMessageSquare,
+  FiShield,
   FiChevronLeft,
   FiChevronRight,
 } from 'react-icons/fi';
 
 export type ModuleType =
   | 'dashboard'
+  | 'users'
   | 'companies'
   | 'contacts'
   | 'deals'
@@ -43,10 +46,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveModule,
   unreadCount = 0,
 }) => {
+  const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
 
   const menuItems: { id: ModuleType; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <FiGrid className="text-lg" /> },
+    ...(isAdmin
+      ? [
+        {
+          id: 'users' as ModuleType,
+          label: 'User Management',
+          icon: <FiShield className="text-lg" />,
+        },
+      ]
+      : []),
     { id: 'companies', label: 'Companies', icon: <FiBriefcase className="text-lg" /> },
     { id: 'contacts', label: 'Contacts', icon: <FiUsers className="text-lg" /> },
     { id: 'deals', label: 'Deals & Pipeline', icon: <FiTrendingUp className="text-lg" /> },
@@ -62,9 +77,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`relative bg-[#0d1322] border-r border-slate-800/80 flex flex-col h-screen sticky top-0 z-20 font-sans transition-all duration-300 ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
+      className={`relative bg-[#0d1322] border-r border-slate-800/80 flex flex-col h-screen sticky top-0 z-20 font-sans transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'
+        }`}
     >
       {/* Floating Toggle Button on Border */}
       <button
@@ -103,13 +117,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               title={isCollapsed ? item.label : undefined}
-              className={`w-full flex items-center ${
-                isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
-              } rounded-xl text-sm font-medium transition-all ${
-                isActive
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
+                } rounded-xl text-sm font-medium transition-all ${isActive
                   ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 font-semibold shadow-xs'
                   : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3.5">
                 <span className={isActive ? 'text-blue-400' : 'text-slate-400'}>
