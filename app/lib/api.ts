@@ -79,6 +79,18 @@ export async function apiFetch<T>(
       : await response.json();
 
     if (!response.ok || json.success === false) {
+      if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        // Hapus token lokal agar tidak terus-terusan dipakai request liar
+        localStorage.removeItem('token'); // sesuaikan key token di projectmu
+        
+        // Redirect ke login jika pengguna belum di halaman login
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+
       throw new Error(json.message || `Request failed with status ${response.status}`);
     }
 
