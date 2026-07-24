@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 import {
   FiGrid,
   FiBriefcase,
@@ -16,24 +16,23 @@ import {
   FiTag,
   FiMessageSquare,
   FiShield,
-  FiChevronLeft,
-  FiChevronRight,
-} from 'react-icons/fi';
+  FiMenu,
+} from "react-icons/fi";
 
 export type ModuleType =
-  | 'dashboard'
-  | 'users'
-  | 'companies'
-  | 'contacts'
-  | 'deals'
-  | 'activities'
-  | 'notes'
-  | 'products'
-  | 'quotes'
-  | 'tickets'
-  | 'campaigns'
-  | 'tags'
-  | 'whatsapp';
+  | "dashboard"
+  | "users"
+  | "companies"
+  | "contacts"
+  | "deals"
+  | "activities"
+  | "notes"
+  | "products"
+  | "quotes"
+  | "tickets"
+  | "campaigns"
+  | "tags"
+  | "whatsapp";
 
 interface SidebarProps {
   activeModule: ModuleType;
@@ -41,7 +40,7 @@ interface SidebarProps {
   unreadCount?: number;
 }
 
-const SIDEBAR_STORAGE_KEY = 'sapaai_sidebar_collapsed';
+const SIDEBAR_STORAGE_KEY = "sapaai_sidebar_collapsed";
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeModule,
@@ -49,12 +48,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   unreadCount = 0,
 }) => {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
-    }
-    return false;
-  });
+
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+    setIsCollapsed(saved);
+  }, []);
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -64,109 +64,172 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === "admin";
 
-  const menuItems: { id: ModuleType; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <FiGrid className="text-lg" /> },
+  const menuItems: {
+    id: ModuleType;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number;
+  }[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: <FiGrid size={18} />,
+    },
     ...(isAdmin
       ? [
-        {
-          id: 'users' as ModuleType,
-          label: 'User Management',
-          icon: <FiShield className="text-lg" />,
-        },
-      ]
+          {
+            id: "users" as ModuleType,
+            label: "User Management",
+            icon: <FiShield size={18} />,
+          },
+        ]
       : []),
-    { id: 'companies', label: 'Companies', icon: <FiBriefcase className="text-lg" /> },
-    { id: 'contacts', label: 'Contacts', icon: <FiUsers className="text-lg" /> },
-    { id: 'deals', label: 'Deals & Pipeline', icon: <FiTrendingUp className="text-lg" /> },
-    { id: 'activities', label: 'Activities', icon: <FiCalendar className="text-lg" /> },
-    { id: 'notes', label: 'CRM Notes', icon: <FiFileText className="text-lg" /> },
-    { id: 'products', label: 'Products & Pricing', icon: <FiPackage className="text-lg" /> },
-    { id: 'quotes', label: 'Sales Quotes', icon: <FiCheckSquare className="text-lg" /> },
-    { id: 'tickets', label: 'Support Tickets', icon: <FiLifeBuoy className="text-lg" /> },
-    { id: 'campaigns', label: 'Campaigns', icon: <FiSend className="text-lg" /> },
-    { id: 'tags', label: 'Tags Taxonomy', icon: <FiTag className="text-lg" /> },
-    { id: 'whatsapp', label: 'WhatsApp Bot', icon: <FiMessageSquare className="text-lg" /> },
+    {
+      id: "companies",
+      label: "Companies",
+      icon: <FiBriefcase size={18} />,
+    },
+    {
+      id: "contacts",
+      label: "Contacts",
+      icon: <FiUsers size={18} />,
+    },
+    {
+      id: "deals",
+      label: "Deals & Pipeline",
+      icon: <FiTrendingUp size={18} />,
+    },
+    {
+      id: "activities",
+      label: "Activities",
+      icon: <FiCalendar size={18} />,
+    },
+    {
+      id: "notes",
+      label: "CRM Notes",
+      icon: <FiFileText size={18} />,
+    },
+    {
+      id: "products",
+      label: "Products & Pricing",
+      icon: <FiPackage size={18} />,
+    },
+    {
+      id: "quotes",
+      label: "Sales Quotes",
+      icon: <FiCheckSquare size={18} />,
+    },
+    {
+      id: "tickets",
+      label: "Support Tickets",
+      icon: <FiLifeBuoy size={18} />,
+    },
+    {
+      id: "campaigns",
+      label: "Campaigns",
+      icon: <FiSend size={18} />,
+    },
+    {
+      id: "tags",
+      label: "Tags Taxonomy",
+      icon: <FiTag size={18} />,
+    },
+    {
+      id: "whatsapp",
+      label: "WhatsApp Bot",
+      icon: <FiMessageSquare size={18} />,
+      badge: unreadCount,
+    },
   ];
 
   return (
     <aside
-      className={`relative bg-[#0d1322] border-r border-slate-800/80 flex flex-col h-screen sticky top-0 z-20 font-sans transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'
-        }`}
+      className={`relative h-screen sticky top-0 bg-[#0d1322] border-r border-slate-800/80 flex flex-col z-20 overflow-hidden transition-[width] duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-full lg:w-64"}`}
     >
-      {/* Floating Toggle Button on Border */}
-      <button
-        onClick={toggleCollapse}
-        className="absolute -right-3.5 top-5 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg border border-slate-700 flex items-center justify-center text-xs z-30 transition-transform duration-200 active:scale-95 focus:outline-none"
-        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-      >
-        {isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
-      </button>
-
-      {/* Brand Header */}
-      <div className={`p-4 border-b border-slate-800/80 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 min-w-[36px] rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20">
-            S
-          </div>
-          {!isCollapsed && (
-            <div className="transition-opacity duration-200">
-              <h1 className="font-bold text-lg leading-tight tracking-tight text-white">
-                SAPA AI
-              </h1>
-              <span className="text-[11px] font-medium text-slate-400 block">
-                Real-Time CRM Engine
-              </span>
-            </div>
-          )}
+      {/* Header */}
+      <div className="h-16 border-b border-slate-800 flex items-center px-3">
+        <button
+          onClick={toggleCollapse}
+          className="w-14 h-9 rounded-lg flex items-center justify-center text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-200 shrink-0"
+        >
+          <FiMenu size={20} />
+        </button>
+        <div
+          className={`ml-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? "opacity-0 w-0 -translate-x-2" : "opacity-100 w-40 translate-x-0 delay-75"}`}
+        >
+          <h1 className="font-bold text-white">SAPA AI</h1>
+          <p className="text-xs text-slate-400">Real-Time CRM Engine</p>
         </div>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {menuItems.map((item) => {
           const isActive = activeModule === item.id;
+
           return (
             <button
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               title={isCollapsed ? item.label : undefined}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'
-                } rounded-xl text-sm font-medium transition-all ${isActive
-                  ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 font-semibold shadow-xs'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                }`}
+              className={`group relative w-full h-11 rounded-xl flex items-center transition-all duration-200 overflow-hidden 
+            ${isActive ? "bg-blue-600/15 border border-blue-500/30 text-blue-400" : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"}`}
             >
-              <div className="flex items-center gap-3.5">
-                <span className={isActive ? 'text-blue-400' : 'text-slate-400'}>
-                  {item.icon}
-                </span>
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+              {/* Icon */}
+              <div
+                className={`flex items-center justify-center shrink-0 transition-all duration-300 ${isCollapsed ? "w-full" : "w-14"}`}
+              >
+                {item.icon}
               </div>
-              {!isCollapsed && item.badge && item.badge > 0 ? (
-                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white">
-                  {item.badge}
+
+              {/* Label */}
+              <div
+                className={`flex items-center justify-between flex-1 overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? "opacity-0 w-0 -translate-x-3" : "opacity-100 w-full translate-x-0 delay-75"}`}
+              >
+                <span
+                  className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
+                >
+                  {item.label}
                 </span>
-              ) : null}
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="mr-3 min-w-[20px] h-5 px-1.5 rounded-full bg-blue-600 text-white text-[11px] flex items-center justify-center font-semibold">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+
+              {/* Active Indicator */}
+              <div
+                className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 rounded-r-full bg-blue-500 transition-all duration-300 ${isActive ? "w-1 opacity-100" : "w-0 opacity-0"}`}
+              />
             </button>
           );
         })}
       </nav>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800/80 bg-[#0d1322] text-xs text-slate-400 flex flex-col gap-1">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          {!isCollapsed && <span className="font-medium text-slate-300">SAPA AI v0.1.0</span>}
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+      {/* Footer */}
+      <div className="border-t border-slate-800/80 p-4">
+        <div
+          className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}
+        >
+          <div
+            className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? "opacity-0 w-0 -translate-x-2" : "opacity-100 w-auto translate-x-0 delay-75"}`}
+          >
+            <p className="text-xs font-medium text-slate-300">SAPA AI v0.1.0</p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              WebSocket Realtime Sync Active
+            </p>
+          </div>
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
           </span>
         </div>
-        {!isCollapsed && (
-          <p className="text-[11px] text-slate-500">WebSocket Realtime Sync Active</p>
-        )}
       </div>
     </aside>
   );
 };
+
+export default Sidebar;
