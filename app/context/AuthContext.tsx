@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
 import { apiFetch, getAuthToken, getStoredUser, removeAuthToken, removeStoredUser, setAuthToken, setStoredUser } from '../lib/api';
+import { wsClient } from '../lib/wsclient';
 
 interface AuthContextType {
   user: User | null;
@@ -49,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    if (wsClient) {
+    wsClient.disconnect();
+  }
     if (token) {
       try {
         await apiFetch('/api/v1/auth/logout', { method: 'POST' });
