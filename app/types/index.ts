@@ -62,17 +62,33 @@ export interface DealStage {
 export interface Deal {
   id: number;
   title: string;
-  contact_id: number;
-  company_id: number;
+  contact_id?: number | null;
+  company_id?: number | null;
   stage_id: number;
+  stage_name?: string;
   owner_id: number;
+  owner_name?: string;
   value: number;
   currency: string;
   expected_close_date: string;
   actual_close_date?: string | null;
   status: 'Open' | 'In Progress' | 'Won' | 'Lost' | string;
   description: string;
+  contact?: Contact | null;
+  company?: Company | null;
+  has_new_message?: boolean;
+  unread_count?: number;
+  last_message?: string;
+  last_message_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
+
+export interface DealDetail extends Deal {
+  contact?: Contact | null;
+  company?: Company | null;
+}
+
 
 export interface Activity {
   id: number;
@@ -184,33 +200,38 @@ export interface WhatsAppSession {
 
 export interface WhatsAppMessage {
   id: number;
+  session_id?: string | null;
+  deal_id?: number | null;
+  contact_id?: number | null;
   phone: string;
+  direction?: 'incoming' | 'outgoing' | string;
   message: string;
-  status: 'sent' | 'failed' | string;
-  sent_at: string;
   wa_message_id?: string | null;
+  sender_name?: string | null;
+  status: 'sent' | 'failed' | 'delivered' | string;
   error_message?: string | null;
+  sent_at?: string;
   created_at?: string;
 }
 
 export interface RealtimeEvent {
   event: 'change';
   entity:
-    | 'user'
-    | 'company'
-    | 'contact'
-    | 'deal_stage'
-    | 'deal'
-    | 'activity'
-    | 'note'
-    | 'product'
-    | 'quote'
-    | 'ticket'
-    | 'campaign'
-    | 'tag'
-    | 'notification'
-    | 'whatsapp_session'
-    | 'whatsapp_message';
+  | 'user'
+  | 'company'
+  | 'contact'
+  | 'deal_stage'
+  | 'deal'
+  | 'activity'
+  | 'note'
+  | 'product'
+  | 'quote'
+  | 'ticket'
+  | 'campaign'
+  | 'tag'
+  | 'notification'
+  | 'whatsapp_session'
+  | 'whatsapp_message';
   action: 'created' | 'updated' | 'deleted';
   id: number;
   timestamp: string;

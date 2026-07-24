@@ -14,7 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
-    <header className="h-16 bg-[#0d1322] border-b border-slate-800 px-6 flex items-center justify-between sticky top-0 z-10 font-sans">
+    <header className="h-16 py-3 bg-[#0d1322] border-b border-slate-800 px-6 flex items-center justify-between sticky top-0 z-10 font-sans">
       {/* Title & Section */}
       <div className="flex items-center gap-4">
         <h2 className="text-xl font-bold text-white capitalize">

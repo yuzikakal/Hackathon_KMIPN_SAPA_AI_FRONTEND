@@ -41,13 +41,28 @@ interface SidebarProps {
   unreadCount?: number;
 }
 
+const SIDEBAR_STORAGE_KEY = 'sapaai_sidebar_collapsed';
+
 export const Sidebar: React.FC<SidebarProps> = ({
   activeModule,
   setActiveModule,
   unreadCount = 0,
 }) => {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
+    }
+    return false;
+  });
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+      return next;
+    });
+  };
 
   const isAdmin = user?.role === 'admin';
 
@@ -82,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Floating Toggle Button on Border */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={toggleCollapse}
         className="absolute -right-3.5 top-5 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-lg border border-slate-700 flex items-center justify-center text-xs z-30 transition-transform duration-200 active:scale-95 focus:outline-none"
         title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
       >

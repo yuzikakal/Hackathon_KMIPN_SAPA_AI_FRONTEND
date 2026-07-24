@@ -1,18 +1,160 @@
-import React from 'react';
-import { FiDollarSign, FiBriefcase, FiUsers, FiMessageSquare, FiZap, FiArrowRight } from 'react-icons/fi';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../../../lib/api';
+import { Deal, DealStage, Contact, Company, Activity, Ticket } from '../../../types';
+import { FiDollarSign, FiBriefcase, FiUsers, FiMessageSquare, FiArrowRight } from 'react-icons/fi';
+
+const MOCK_DEALS: Deal[] = [
+  { id: 5, title: 'SAPA AI Enterprise License', contact_id: 10, company_id: 1, stage_id: 1, owner_id: 1, value: 150000000, currency: 'IDR', expected_close_date: '2026-08-30', status: 'Open', description: '500 seats license deal' },
+  { id: 6, title: 'WhatsApp Bot Addon', contact_id: 11, company_id: 2, stage_id: 2, owner_id: 1, value: 35000000, currency: 'IDR', expected_close_date: '2026-08-15', status: 'In Progress', description: 'Unlimited broadcast addon' },
+];
+
+const MOCK_STAGES: DealStage[] = [
+  { id: 1, name: 'Qualification', position: 1, probability: 20, color: '#3b82f6' },
+  { id: 2, name: 'Proposal Sent', position: 2, probability: 50, color: '#6366f1' },
+  { id: 3, name: 'Negotiation', position: 3, probability: 80, color: '#f59e0b' },
+  { id: 4, name: 'Closed Won', position: 4, probability: 100, color: '#10b981' },
+];
+
+const MOCK_CONTACTS: Contact[] = [
+  { id: 10, first_name: 'Budi', last_name: 'Santoso', email: 'budi@acme.com', phone: '+62812345678', job_title: 'CTO', company_id: 1, source: 'Website', status: 'Lead', assigned_to: 1, description: 'Key decision maker' },
+];
+
+const MOCK_COMPANIES: Company[] = [
+  { id: 1, name: 'Acme Corp', industry: 'Technology', website: '', phone: '', email: '', address: '', city: '', country: '', description: '', assigned_to: 1 },
+];
+
+function SkeletonCard() {
+  return (
+    <div className="astryx-card p-5 bg-[#111827] animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2.5 flex-1">
+          <div className="h-3 bg-slate-800 rounded w-20" />
+          <div className="h-5 bg-slate-800 rounded w-32" />
+          <div className="h-3 bg-slate-800 rounded w-24" />
+        </div>
+        <div className="w-11 h-11 rounded-xl bg-slate-800" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonPipeline() {
+  return (
+    <div className="astryx-card p-6 bg-[#111827] animate-pulse">
+      <div className="h-4 bg-slate-800 rounded w-40 mb-6" />
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="h-3 bg-slate-800 rounded w-40" />
+              <div className="h-3 bg-slate-800 rounded w-24" />
+            </div>
+            <div className="w-full bg-slate-800 h-2 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export const DashboardModule: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [deals, setDeals] = useState<Deal[]>(MOCK_DEALS);
+  const [stages, setStages] = useState<DealStage[]>(MOCK_STAGES);
+  const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
+  const [companies, setCompanies] = useState<Company[]>(MOCK_COMPANIES);
+  const [usingFallback, setUsingFallback] = useState(false);
 
-  const stats = [
-    { label: 'Total Revenue', value: 'IDR 150.000.000', change: '+12.5%', icon: <FiDollarSign />, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
-    { label: 'Active Deals', value: '18 Deals', change: '5 Closed Won', icon: <FiBriefcase />, color: 'text-blue-400 bg-blue-950/40 border-blue-800/50' },
-    { label: 'Key Contacts', value: '248 Leads', change: '+24 this week', icon: <FiUsers />, color: 'text-indigo-400 bg-indigo-950/40 border-indigo-800/50' },
-    { label: 'WhatsApp Status', value: 'Connected', change: '+628123456789', icon: <FiMessageSquare />, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
-  ];
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [d, s, c, co] = await Promise.allSettled([
+          apiFetch<Deal[]>('/api/v1/deals'),
+          apiFetch<DealStage[]>('/api/v1/deal-stages'),
+          apiFetch<Contact[]>('/api/v1/contacts'),
+          apiFetch<Company[]>('/api/v1/companies'),
+        ]);
+
+        if (d.status === 'fulfilled' && Array.isArray(d.value)) setDeals(d.value);
+        if (s.status === 'fulfilled' && Array.isArray(s.value)) setStages(s.value);
+        if (c.status === 'fulfilled' && Array.isArray(c.value)) setContacts(c.value);
+        if (co.status === 'fulfilled' && Array.isArray(co.value)) setCompanies(co.value);
+
+        const anyFailed = [d, s, c, co].some((r) => r.status === 'rejected');
+        setUsingFallback(anyFailed);
+      } catch {
+        setUsingFallback(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  const totalRevenue = deals.reduce((acc, d) => acc + (d.value || 0), 0);
+  const openDeals = deals.filter((d) => d.status === 'Open' || d.status === 'In Progress');
+  const closedDeals = deals.filter((d) => d.status === 'Won');
+  const leads = contacts.filter((c) => c.status === 'Lead');
+
+  const stageMap = stages.reduce<Record<number, DealStage>>((acc, s) => {
+    acc[s.id] = s;
+    return acc;
+  }, {});
+
+  const pipelineData = stages
+    .filter((s) => s.id !== 4)
+    .map((s) => {
+      const stageDeals = deals.filter((d) => d.stage_id === s.id);
+      return {
+        stage: s.name,
+        count: stageDeals.length,
+        value: stageDeals.reduce((acc, d) => acc + (d.value || 0), 0),
+        color: `bg-[${s.color}]`,
+        colorHex: s.color,
+      };
+    });
+
+  const wonDeals = deals.filter((d) => d.stage_id === 4);
+  const wonValue = wonDeals.reduce((acc, d) => acc + (d.value || 0), 0);
+  pipelineData.push({
+    stage: 'Closed Won',
+    count: wonDeals.length,
+    value: wonValue,
+    color: 'bg-emerald-500',
+    colorHex: '#10b981',
+  });
+
+  const maxPipelineCount = Math.max(...pipelineData.map((p) => p.count), 1);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 font-sans">
+        <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl animate-pulse h-24" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <SkeletonPipeline />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Top Banner */}
+      {usingFallback && (
+        <div className="px-4 py-2 bg-amber-950/40 border border-amber-800/50 rounded-lg text-xs text-amber-300 font-medium">
+          Using offline data — some API endpoints are unavailable.
+        </div>
+      )}
+
       <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-blue-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Welcome back to SAPA AI CRM</h1>
@@ -20,16 +162,15 @@ export const DashboardModule: React.FC = () => {
             Real-time multi-channel sales pipeline and WebSocket entity sync active.
           </p>
         </div>
-        <div className="flex gap-2">
-          <span className="px-3 py-1.5 bg-white/15 backdrop-blur-md rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-white/20">
-            <FiZap className="text-amber-300" /> WebSocket WS /api/v1/ws Active
-          </span>
-        </div>
       </div>
 
-      {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+        {[
+          { label: 'Total Revenue', value: `IDR ${totalRevenue.toLocaleString()}`, change: `${openDeals.length} open deals`, icon: <FiDollarSign />, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
+          { label: 'Active Deals', value: `${openDeals.length} Deals`, change: `${closedDeals.length} Closed Won`, icon: <FiBriefcase />, color: 'text-blue-400 bg-blue-950/40 border-blue-800/50' },
+          { label: 'Key Contacts', value: `${contacts.length} Contacts`, change: `${leads.length} leads`, icon: <FiUsers />, color: 'text-indigo-400 bg-indigo-950/40 border-indigo-800/50' },
+          { label: 'Companies', value: `${companies.length} Companies`, change: `${deals.length} total deals`, icon: <FiMessageSquare />, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50' },
+        ].map((stat, i) => (
           <div key={i} className="astryx-card p-5 flex items-center justify-between bg-[#111827]">
             <div>
               <p className="text-xs font-semibold text-slate-400">{stat.label}</p>
@@ -45,9 +186,7 @@ export const DashboardModule: React.FC = () => {
         ))}
       </div>
 
-      {/* Grid Section: Pipeline Overview & Real-Time Event Stream */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pipeline Summary Card */}
         <div className="lg:col-span-2 astryx-card p-6 bg-[#111827]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-base text-white">Pipeline Overview</h3>
@@ -57,22 +196,23 @@ export const DashboardModule: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {[
-              { stage: 'Qualification & Discovery', count: 4, value: 'IDR 45.000.000', color: 'bg-blue-500' },
-              { stage: 'Proposal & Quote Sent', count: 6, value: 'IDR 85.000.000', color: 'bg-indigo-500' },
-              { stage: 'Negotiation', count: 3, value: 'IDR 60.000.000', color: 'bg-amber-500' },
-              { stage: 'Closed Won', count: 5, value: 'IDR 150.000.000', color: 'bg-emerald-500' },
-            ].map((p, idx) => (
+            {pipelineData.map((p, idx) => (
               <div key={idx} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-200 mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }} />
                     <span>{p.stage}</span>
                   </div>
-                  <span>{p.value} ({p.count})</span>
+                  <span>IDR {p.value.toLocaleString()} ({p.count})</span>
                 </div>
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div className={`h-full ${p.color}`} style={{ width: `${(p.count / 18) * 100}%` }} />
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(p.count / maxPipelineCount) * 100}%`,
+                      backgroundColor: p.colorHex,
+                    }}
+                  />
                 </div>
               </div>
             ))}
