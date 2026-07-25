@@ -1,6 +1,25 @@
 import { RealtimeEvent } from '../types';
+import { getApiBaseUrl } from './api';
 
 type EventListener = (event: RealtimeEvent) => void;
+type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
+
+export function getWebSocketUrl(token: string): string {
+    const configuredUrl = process.env.NEXT_PUBLIC_WS_URL;
+    const endpoint = configuredUrl || `${getApiBaseUrl()}/api/v1/ws`;
+    const url = new URL(endpoint);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.searchParams.set('token', token);
+    return url.toString();
+}
+
+function isRealtimeEvent(payload: unknown): payload is RealtimeEvent {
+    if (!payload || typeof payload !== 'object') return false;
+    const event = payload as Partial<RealtimeEvent>;
+    return event.event === 'change'
+        && typeof event.entity === 'string'
+        && ['created', 'updated', 'deleted'].includes(event.action || '');
+}
 
 class RealtimeWSClient {
     private socket: WebSocket | null = null;
@@ -8,8 +27,8 @@ class RealtimeWSClient {
     private isConnecting = false;
     private reconnectTimer: NodeJS.Timeout | null = null;
     private token: string | null = null;
-    private statusListeners: Set<(status: 'connected' | 'connecting' | 'disconnected') => void> = new Set();
-    public currentStatus: 'connected' | 'connecting' | 'disconnected' = 'disconnected';
+    private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
+    public currentStatus: ConnectionStatus = 'disconnected';
 
     public connect(token: string) {
         if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
@@ -19,14 +38,8 @@ class RealtimeWSClient {
         this.token = token;
         this.setStatus('connecting');
 
-        const host = typeof window !== 'undefined'
-            ? (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5790/api/v1/ws')
-            : 'ws://localhost:5790/api/v1/ws';
-
-        const wsUrl = `${host}?token=${encodeURIComponent(token)}`;
-
         try {
-            this.socket = new WebSocket(wsUrl);
+            this.socket = new WebSocket(getWebSocketUrl(token));
 
             this.socket.onopen = () => {
                 console.log('[WebSocket] Real-time CRUD connected');
@@ -39,11 +52,11 @@ class RealtimeWSClient {
 
             this.socket.onmessage = (event) => {
                 try {
-                    const payload: RealtimeEvent = JSON.parse(event.data);
-                    if (payload && payload.event === 'change') {
+                    const payload: unknown = JSON.parse(event.data);
+                    if (isRealtimeEvent(payload)) {
                         this.notifyListeners(payload);
                     }
-                } catch (err) {
+                } catch {
                     console.warn('[WebSocket] Invalid message JSON:', event.data);
                 }
             };
@@ -67,6 +80,7 @@ class RealtimeWSClient {
     }
 
     public disconnect() {
+        this.token = null;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -85,7 +99,7 @@ class RealtimeWSClient {
         };
     }
 
-    public onStatusChange(listener: (status: 'connected' | 'connecting' | 'disconnected') => void): () => void {
+    public onStatusChange(listener: (status: ConnectionStatus) => void): () => void {
         this.statusListeners.add(listener);
         listener(this.currentStatus);
         return () => {
@@ -93,7 +107,7 @@ class RealtimeWSClient {
         };
     }
 
-    private setStatus(status: 'connected' | 'connecting' | 'disconnected') {
+    private setStatus(status: ConnectionStatus) {
         this.currentStatus = status;
         this.statusListeners.forEach((fn) => fn(status));
     }

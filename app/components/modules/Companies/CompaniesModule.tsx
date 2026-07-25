@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRealtime } from '../../../context/RealtimeContext';
 import { apiFetch } from '../../../lib/api';
 import { Company } from '../../../types';
-import { FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiPlus } from 'react-icons/fi';
 
 export const CompaniesModule: React.FC = () => {
   const { subscribeEntity } = useRealtime();
@@ -36,7 +36,6 @@ export const CompaniesModule: React.FC = () => {
       assigned_to: 1,
     },
   ]);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Partial<Company>>({
@@ -50,7 +49,6 @@ export const CompaniesModule: React.FC = () => {
   });
 
   const fetchCompanies = async () => {
-    setLoading(true);
     try {
       const data = await apiFetch<Company[]>('/api/v1/companies');
       if (Array.isArray(data)) {
@@ -58,8 +56,6 @@ export const CompaniesModule: React.FC = () => {
       }
     } catch (err) {
       console.warn('API error, using initial mock data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -67,7 +63,7 @@ export const CompaniesModule: React.FC = () => {
     fetchCompanies();
     const unsubscribe = subscribeEntity('company', () => fetchCompanies());
     return () => unsubscribe();
-  }, []);
+  }, [subscribeEntity]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +81,7 @@ export const CompaniesModule: React.FC = () => {
       }
       fetchCompanies();
       setShowModal(false);
-    } catch (err) {
+    } catch {
       if (editingCompany.id) {
         setCompanies((prev) =>
           prev.map((c) => (c.id === editingCompany.id ? ({ ...c, ...editingCompany } as Company) : c))
@@ -115,7 +111,7 @@ export const CompaniesModule: React.FC = () => {
     try {
       await apiFetch(`/api/v1/companies/${id}`, { method: 'DELETE' });
       fetchCompanies();
-    } catch (err) {
+    } catch {
       setCompanies((prev) => prev.filter((c) => c.id !== id));
     }
   };
@@ -123,7 +119,7 @@ export const CompaniesModule: React.FC = () => {
   const filteredCompanies = companies.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.industry.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.industry || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -174,9 +170,11 @@ export const CompaniesModule: React.FC = () => {
               <tr key={comp.id} className="hover:bg-slate-800/40 transition-colors">
                 <td className="px-5 py-3.5 font-semibold text-white">
                   <div>{comp.name}</div>
-                  <a href={comp.website} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
-                    {comp.website}
-                  </a>
+                  {comp.website && (
+                    <a href={comp.website} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
+                      {comp.website}
+                    </a>
+                  )}
                 </td>
                 <td className="px-5 py-3.5">
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-950 text-blue-400 border border-blue-800/60">

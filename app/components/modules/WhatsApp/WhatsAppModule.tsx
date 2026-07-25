@@ -3,9 +3,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { QRCode } from 'react-qr-code';
 import { useRealtime } from '../../../context/RealtimeContext';
-import { apiFetch } from '../../../lib/api';
+import { apiFetch, apiUpload, resolveApiAssetUrl } from '../../../lib/api';
 import { WhatsAppMessage, WhatsAppSession } from '../../../types';
-import { FiMessageSquare, FiSend, FiZap, FiPower, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
+import {
+  FiAlertCircle,
+  FiMessageSquare,
+  FiPaperclip,
+  FiPower,
+  FiRefreshCw,
+  FiSend,
+  FiX,
+  FiZap,
+} from 'react-icons/fi';
 
 interface WhatsAppStatusResponse extends WhatsAppSession {
   wa_status?: string;
@@ -32,6 +41,9 @@ export const WhatsAppModule: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaName, setMediaName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -135,14 +147,38 @@ export const WhatsAppModule: React.FC = () => {
     try {
       await apiFetch('/api/v1/whatsapp/send', {
         method: 'POST',
-        body: JSON.stringify({ phone: recipientPhone, message: messageText }),
+        body: JSON.stringify({
+          phone: recipientPhone,
+          message: messageText,
+          media_url: mediaUrl,
+        }),
       });
       await fetchMessages();
       setMessageText('');
+      setMediaUrl(null);
+      setMediaName(null);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to send message. Please check the backend server.'));
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const upload = await apiUpload(file);
+      setMediaUrl(upload.url);
+      setMediaName(upload.filename || file.name);
+    } catch (uploadError) {
+      setError(getErrorMessage(uploadError, 'Could not upload the attachment.'));
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -173,10 +209,10 @@ export const WhatsAppModule: React.FC = () => {
             <span>Session Status</span>
             <span
               className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${isConnected(session?.status)
-                  ? 'bg-emerald-950 text-emerald-400 border-emerald-800/60'
-                  : isPairing(session?.status)
-                    ? 'bg-amber-950 text-amber-400 border-amber-800/60'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                ? 'bg-emerald-950 text-emerald-400 border-emerald-800/60'
+                : isPairing(session?.status)
+                  ? 'bg-amber-950 text-amber-400 border-amber-800/60'
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
                 }`}
             >
               {session?.status || 'DISCONNECTED'}
@@ -218,7 +254,7 @@ export const WhatsAppModule: React.FC = () => {
         </div>
 
         {/* Messaging Console */}
-        <div className="lg:col-span-2 astryx-card p-6 space-y-4 flex flex-col justify-between">
+        <div style={{ display: "none" }} className="lg:col-span-2 astryx-card p-6 space-y-4 flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-base text-white mb-4">
               Send Outgoing Message
@@ -255,6 +291,42 @@ export const WhatsAppModule: React.FC = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="block font-semibold text-slate-300">
+                  Optional attachment reference
+                </label>
+                {mediaUrl ? (
+                  <div className="flex items-center justify-between rounded-lg border border-blue-800/50 bg-blue-950/30 px-3 py-2 text-blue-300">
+                    <span className="truncate">{mediaName || mediaUrl}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaUrl(null);
+                        setMediaName(null);
+                      }}
+                      className="ml-2 p-1 text-slate-400 hover:text-red-400"
+                      aria-label="Remove attachment"
+                    >
+                      <FiX />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-slate-900/50 px-3 py-2 text-slate-400 hover:border-blue-600 hover:text-blue-300">
+                    <FiPaperclip />
+                    {uploading ? 'Uploading...' : 'Upload image or document'}
+                    <input
+                      type="file"
+                      onChange={handleMediaUpload}
+                      disabled={uploading || !isConnected(session?.status)}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                <p className="text-[10px] text-amber-400/80">
+                  The current backend logs this URL with the message; its WhatsApp transport still sends text only.
+                </p>
+              </div>
+
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -288,6 +360,16 @@ export const WhatsAppModule: React.FC = () => {
                         <FiMessageSquare className="text-xs" /> To {m.phone}
                       </span>
                       <p className="text-slate-200 mt-0.5">{m.message}</p>
+                      {m.media_url && (
+                        <a
+                          href={resolveApiAssetUrl(m.media_url) || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] text-blue-400 hover:underline"
+                        >
+                          <FiPaperclip /> Open attachment
+                        </a>
+                      )}
                       {m.error_message && (
                         <p className="text-red-400 mt-0.5">Error: {m.error_message}</p>
                       )}

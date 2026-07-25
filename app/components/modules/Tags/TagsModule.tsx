@@ -29,7 +29,7 @@ export const TagsModule: React.FC = () => {
     fetchTags();
     const unsubscribe = subscribeEntity('tag', () => fetchTags());
     return () => unsubscribe();
-  }, []);
+  }, [subscribeEntity]);
 
   const handleCreateTag = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +42,7 @@ export const TagsModule: React.FC = () => {
       });
       fetchTags();
       setTagName('');
-    } catch (err) {
+    } catch {
       const created: Tag = { id: Date.now(), name: tagName, color: tagColor };
       setTags((prev) => [...prev, created]);
       setTagName('');

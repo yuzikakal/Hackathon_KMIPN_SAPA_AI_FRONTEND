@@ -10,9 +10,6 @@ import {
   FiCalendar,
   FiFileText,
   FiPackage,
-  FiCheckSquare,
-  FiLifeBuoy,
-  FiSend,
   FiTag,
   FiMessageSquare,
   FiShield,
@@ -72,77 +69,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
     icon: React.ReactNode;
     badge?: number;
   }[] = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: <FiGrid size={18} />,
-    },
-    ...(isAdmin
-      ? [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: <FiGrid size={18} />,
+      },
+      ...(isAdmin
+        ? [
           {
             id: "users" as ModuleType,
             label: "User Management",
             icon: <FiShield size={18} />,
           },
         ]
-      : []),
-    {
-      id: "companies",
-      label: "Companies",
-      icon: <FiBriefcase size={18} />,
-    },
-    {
-      id: "contacts",
-      label: "Contacts",
-      icon: <FiUsers size={18} />,
-    },
-    {
-      id: "deals",
-      label: "Deals & Pipeline",
-      icon: <FiTrendingUp size={18} />,
-    },
-    {
-      id: "activities",
-      label: "Activities",
-      icon: <FiCalendar size={18} />,
-    },
-    {
-      id: "notes",
-      label: "CRM Notes",
-      icon: <FiFileText size={18} />,
-    },
-    {
-      id: "products",
-      label: "Products & Pricing",
-      icon: <FiPackage size={18} />,
-    },
-    {
-      id: "quotes",
-      label: "Sales Quotes",
-      icon: <FiCheckSquare size={18} />,
-    },
-    {
-      id: "tickets",
-      label: "Support Tickets",
-      icon: <FiLifeBuoy size={18} />,
-    },
-    {
-      id: "campaigns",
-      label: "Campaigns",
-      icon: <FiSend size={18} />,
-    },
-    {
-      id: "tags",
-      label: "Tags Taxonomy",
-      icon: <FiTag size={18} />,
-    },
-    {
-      id: "whatsapp",
-      label: "WhatsApp Bot",
-      icon: <FiMessageSquare size={18} />,
-      badge: unreadCount,
-    },
-  ];
+        : []),
+      {
+        id: "companies",
+        label: "Companies",
+        icon: <FiBriefcase size={18} />,
+      },
+      {
+        id: "contacts",
+        label: "Contacts",
+        icon: <FiUsers size={18} />,
+      },
+      {
+        id: "deals",
+        label: "Deals & Pipeline",
+        icon: <FiTrendingUp size={18} />,
+      },
+      {
+        id: "activities",
+        label: "Activities",
+        icon: <FiCalendar size={18} />,
+      },
+      {
+        id: "notes",
+        label: "CRM Notes",
+        icon: <FiFileText size={18} />,
+      },
+      {
+        id: "products",
+        label: "Products, Pricing, & Quotes",
+        icon: <FiPackage size={18} />,
+      },
+      // {
+      //   id: "quotes",
+      //   label: "Sales Quotes",
+      //   icon: <FiCheckSquare size={18} />,
+      // },
+      // {
+      //   id: "tickets",
+      //   label: "Support Tickets",
+      //   icon: <FiLifeBuoy size={18} />,
+      // },
+      // {
+      //   id: "campaigns",
+      //   label: "Campaigns",
+      //   icon: <FiSend size={18} />,
+      // },
+      {
+        id: "tags",
+        label: "Tags Taxonomy",
+        icon: <FiTag size={18} />,
+      },
+      {
+        id: "whatsapp",
+        label: "WhatsApp Bot",
+        icon: <FiMessageSquare size={18} />,
+        badge: unreadCount,
+      },
+    ];
 
   return (
     <aside

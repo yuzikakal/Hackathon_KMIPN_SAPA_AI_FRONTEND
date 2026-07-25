@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useRealtime } from '../../../context/RealtimeContext';
 import { apiFetch } from '../../../lib/api';
-import { Deal, DealStage, Contact, Company, Activity, Ticket } from '../../../types';
+import { Deal, DealStage, Contact, Company } from '../../../types';
 import { FiDollarSign, FiBriefcase, FiUsers, FiMessageSquare, FiArrowRight } from 'react-icons/fi';
 
 const MOCK_DEALS: Deal[] = [
@@ -60,6 +61,7 @@ function SkeletonPipeline() {
 }
 
 export const DashboardModule: React.FC = () => {
+  const { subscribeEntity } = useRealtime();
   const [loading, setLoading] = useState(true);
   const [deals, setDeals] = useState<Deal[]>(MOCK_DEALS);
   const [stages, setStages] = useState<DealStage[]>(MOCK_STAGES);
@@ -67,42 +69,44 @@ export const DashboardModule: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>(MOCK_COMPANIES);
   const [usingFallback, setUsingFallback] = useState(false);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [d, s, c, co] = await Promise.allSettled([
-          apiFetch<Deal[]>('/api/v1/deals'),
-          apiFetch<DealStage[]>('/api/v1/deal-stages'),
-          apiFetch<Contact[]>('/api/v1/contacts'),
-          apiFetch<Company[]>('/api/v1/companies'),
-        ]);
+  const fetchAll = useCallback(async () => {
+    try {
+      const [d, s, c, co] = await Promise.allSettled([
+        apiFetch<Deal[]>('/api/v1/deals'),
+        apiFetch<DealStage[]>('/api/v1/deal-stages'),
+        apiFetch<Contact[]>('/api/v1/contacts'),
+        apiFetch<Company[]>('/api/v1/companies'),
+      ]);
 
-        if (d.status === 'fulfilled' && Array.isArray(d.value)) setDeals(d.value);
-        if (s.status === 'fulfilled' && Array.isArray(s.value)) setStages(s.value);
-        if (c.status === 'fulfilled' && Array.isArray(c.value)) setContacts(c.value);
-        if (co.status === 'fulfilled' && Array.isArray(co.value)) setCompanies(co.value);
+      if (d.status === 'fulfilled' && Array.isArray(d.value)) setDeals(d.value);
+      if (s.status === 'fulfilled' && Array.isArray(s.value)) setStages(s.value);
+      if (c.status === 'fulfilled' && Array.isArray(c.value)) setContacts(c.value);
+      if (co.status === 'fulfilled' && Array.isArray(co.value)) setCompanies(co.value);
 
-        const anyFailed = [d, s, c, co].some((r) => r.status === 'rejected');
-        setUsingFallback(anyFailed);
-      } catch {
-        setUsingFallback(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
+      const anyFailed = [d, s, c, co].some((result) => result.status === 'rejected');
+      setUsingFallback(anyFailed);
+    } catch {
+      setUsingFallback(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+    const unsubscribers = [
+      subscribeEntity('deal', fetchAll),
+      subscribeEntity('deal_stage', fetchAll),
+      subscribeEntity('contact', fetchAll),
+      subscribeEntity('company', fetchAll),
+    ];
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+  }, [fetchAll, subscribeEntity]);
 
   const totalRevenue = deals.reduce((acc, d) => acc + (d.value || 0), 0);
   const openDeals = deals.filter((d) => d.status === 'Open' || d.status === 'In Progress');
   const closedDeals = deals.filter((d) => d.status === 'Won');
   const leads = contacts.filter((c) => c.status === 'Lead');
-
-  const stageMap = stages.reduce<Record<number, DealStage>>((acc, s) => {
-    acc[s.id] = s;
-    return acc;
-  }, {});
 
   const pipelineData = stages
     .filter((s) => s.id !== 4)
@@ -200,7 +204,7 @@ export const DashboardModule: React.FC = () => {
               <div key={idx} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-200 mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.colorHex }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.colorHex || '#64748b' }} />
                     <span>{p.stage}</span>
                   </div>
                   <span>IDR {p.value.toLocaleString()} ({p.count})</span>
@@ -210,7 +214,7 @@ export const DashboardModule: React.FC = () => {
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${(p.count / maxPipelineCount) * 100}%`,
-                      backgroundColor: p.colorHex,
+                      backgroundColor: p.colorHex || '#64748b',
                     }}
                   />
                 </div>

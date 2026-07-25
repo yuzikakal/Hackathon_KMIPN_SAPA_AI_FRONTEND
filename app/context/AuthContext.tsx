@@ -51,8 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     if (wsClient) {
-    wsClient.disconnect();
-  }
+      wsClient.disconnect();
+    }
     if (token) {
       try {
         await apiFetch('/api/v1/auth/logout', { method: 'POST' });

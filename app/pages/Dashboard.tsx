@@ -49,7 +49,7 @@ export default function DashboardPage() {
         return (
             <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center space-y-4 font-sans text-slate-200">
                 <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm font-medium text-slate-400">Verifying JWT authentication...</p>
+                <p className="text-sm font-medium text-slate-400">Verifying authentication...</p>
             </div>
         );
     }
@@ -60,10 +60,21 @@ export default function DashboardPage() {
             <Sidebar activeModule={activeModule} setActiveModule={handleSetModule} />
 
             {/* Main Workspace */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#090d16]">
+            <div
+                className={`flex min-w-0 flex-1 flex-col bg-[#090d16] ${activeModule === 'deals'
+                    ? 'overflow-y-auto lg:overflow-hidden'
+                    : 'overflow-y-auto'
+                    }`}
+            >
                 <Header title={activeModule.replace('_', ' ')} />
 
-                <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto bg-[#090d16]">
+                <main
+                    data-testid="dashboard-main"
+                    className={`mx-auto w-full flex-1 bg-[#090d16] ${activeModule === 'deals'
+                        ? 'min-h-0 max-w-[1600px] p-3 md:p-4 lg:overflow-hidden'
+                        : 'max-w-7xl p-6 md:p-8'
+                        }`}
+                >
                     <div className={activeModule === 'dashboard' ? 'block' : 'hidden'}>
                         <DashboardModule />
                     </div>
@@ -78,7 +89,7 @@ export default function DashboardPage() {
                     <div className={activeModule === 'contacts' ? 'block' : 'hidden'}>
                         <ContactsModule />
                     </div>
-                    <div className={activeModule === 'deals' ? 'block' : 'hidden'}>
+                    <div className={activeModule === 'deals' ? 'h-full min-h-0' : 'hidden'}>
                         <DealsModule />
                     </div>
                     <div className={activeModule === 'activities' ? 'block' : 'hidden'}>

@@ -35,7 +35,7 @@ export const TicketsModule: React.FC = () => {
     fetchTickets();
     const unsubscribe = subscribeEntity('ticket', () => fetchTickets());
     return () => unsubscribe();
-  }, []);
+  }, [subscribeEntity]);
 
   const closeTicket = async (id: number) => {
     try {
@@ -44,7 +44,7 @@ export const TicketsModule: React.FC = () => {
         body: JSON.stringify({ status: 'Closed' }),
       });
       fetchTickets();
-    } catch (err) {
+    } catch {
       setTickets((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'Closed' } : t))
       );

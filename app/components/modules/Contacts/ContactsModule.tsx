@@ -67,7 +67,7 @@ export const ContactsModule: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [subscribeEntity]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +85,7 @@ export const ContactsModule: React.FC = () => {
       }
       fetchContacts();
       setShowModal(false);
-    } catch (err) {
+    } catch {
       if (editingContact.id) {
         setContacts((prev) =>
           prev.map((c) => (c.id === editingContact.id ? ({ ...c, ...editingContact } as Contact) : c))
@@ -114,7 +114,7 @@ export const ContactsModule: React.FC = () => {
   const filtered = contacts.filter((c) => {
     const matchesSearch =
       `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (c.email || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

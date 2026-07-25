@@ -36,7 +36,7 @@ export const CampaignsModule: React.FC = () => {
     fetchCampaigns();
     const unsubscribe = subscribeEntity('campaign', () => fetchCampaigns());
     return () => unsubscribe();
-  }, []);
+  }, [subscribeEntity]);
 
   return (
     <div className="space-y-6 font-sans">
