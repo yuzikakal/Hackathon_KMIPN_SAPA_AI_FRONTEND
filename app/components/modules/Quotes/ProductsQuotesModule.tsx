@@ -24,6 +24,8 @@ import {
   ProductCatalogManager,
   QuoteTemplateManager,
 } from './CommercialCrudPanels';
+import { upsertPriceBook } from './commercial';
+import { PriceBookManager } from './PriceBookManager';
 import { SalesQuoteManager } from './SalesQuoteManager';
 
 const getErrorMessage = (error: unknown, fallback: string) =>
@@ -53,6 +55,7 @@ export const ProductsQuotesModule: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [resolvedPrice, setResolvedPrice] = useState<ResolvedPrice | null>(null);
   const [resolvingPrice, setResolvingPrice] = useState(false);
+  const [priceBookRefreshKey, setPriceBookRefreshKey] = useState(0);
 
   const [templateId, setTemplateId] = useState('');
   const [templateDealId, setTemplateDealId] = useState('');
@@ -111,7 +114,15 @@ export const ProductsQuotesModule: React.FC = () => {
         setProducts((current) => applyRealtimeChange(current, event));
       }),
       subscribeEntity('price_book', (event) => {
-        setPriceBooks((current) => applyRealtimeChange(current, event));
+        setPriceBookRefreshKey((current) => current + 1);
+        if (event.action === 'deleted' && typeof event.id === 'number') {
+          setPriceBooks((current) => current.filter((book) => book.id !== event.id));
+          return;
+        }
+        const incoming = event.payload as PriceBook | undefined;
+        if (incoming && typeof incoming.id === 'number') {
+          setPriceBooks((current) => upsertPriceBook(current, incoming));
+        }
       }),
       subscribeEntity('quote', (event) => {
         setQuotes((current) => applyRealtimeChange(current, event));
@@ -124,8 +135,16 @@ export const ProductsQuotesModule: React.FC = () => {
   }, [fetchWorkspace, subscribeEntity]);
 
   useEffect(() => {
-    const defaultBook = priceBooks.find((book) => book.is_default && book.is_active);
-    if (!priceBookId && defaultBook) setPriceBookId(String(defaultBook.id));
+    const selectedBookExists = priceBooks.some(
+      (book) => book.id === Number(priceBookId) && book.is_active
+    );
+    if (!selectedBookExists) {
+      const preferredBook =
+        priceBooks.find((book) => book.is_default && book.is_active)
+        || priceBooks.find((book) => book.is_active);
+      setPriceBookId(preferredBook ? String(preferredBook.id) : '');
+      setResolvedPrice(null);
+    }
     if (!productId && products[0]) setProductId(String(products[0].id));
   }, [priceBooks, priceBookId, productId, products]);
 
@@ -250,8 +269,8 @@ export const ProductsQuotesModule: React.FC = () => {
         <div
           role={actionFailed ? 'alert' : 'status'}
           className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${actionFailed
-              ? 'border-rose-800/50 bg-rose-950/40 text-rose-300'
-              : 'border-blue-800/50 bg-blue-950/40 text-blue-300'
+            ? 'border-rose-800/50 bg-rose-950/40 text-rose-300'
+            : 'border-blue-800/50 bg-blue-950/40 text-blue-300'
             }`}
         >
           {actionFailed
@@ -292,7 +311,11 @@ export const ProductsQuotesModule: React.FC = () => {
           <form onSubmit={handleResolvePrice} className="space-y-3 text-xs">
             <select
               value={priceBookId}
-              onChange={(event) => setPriceBookId(event.target.value)}
+              onChange={(event) => {
+                setPriceBookId(event.target.value);
+                setResolvedPrice(null);
+              }}
+              aria-label="Price Book"
               className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2"
               required
             >
@@ -305,7 +328,11 @@ export const ProductsQuotesModule: React.FC = () => {
             </select>
             <select
               value={productId}
-              onChange={(event) => setProductId(event.target.value)}
+              onChange={(event) => {
+                setProductId(event.target.value);
+                setResolvedPrice(null);
+              }}
+              aria-label="Product"
               className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2"
               required
             >
@@ -345,6 +372,30 @@ export const ProductsQuotesModule: React.FC = () => {
           )}
         </section>
       </div>
+
+      <PriceBookManager
+        priceBooks={priceBooks}
+        products={products}
+        loading={loading}
+        refreshKey={priceBookRefreshKey}
+        onSaved={(priceBook) => {
+          setPriceBooks((current) => upsertPriceBook(current, priceBook));
+          if (priceBook.is_default && priceBook.is_active) {
+            setPriceBookId(String(priceBook.id));
+            setResolvedPrice(null);
+          }
+        }}
+        onDeleted={(deletedPriceBookId) => {
+          setPriceBooks((current) =>
+            current.filter((priceBook) => priceBook.id !== deletedPriceBookId)
+          );
+          if (priceBookId === String(deletedPriceBookId)) {
+            setPriceBookId('');
+            setResolvedPrice(null);
+          }
+        }}
+        onFeedback={showFeedback}
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="astryx-card space-y-4 p-5">

@@ -121,16 +121,6 @@ export const DashboardModule: React.FC = () => {
       };
     });
 
-  const wonDeals = deals.filter((d) => d.stage_id === 4);
-  const wonValue = wonDeals.reduce((acc, d) => acc + (d.value || 0), 0);
-  pipelineData.push({
-    stage: 'Closed Won',
-    count: wonDeals.length,
-    value: wonValue,
-    color: 'bg-emerald-500',
-    colorHex: '#10b981',
-  });
-
   const maxPipelineCount = Math.max(...pipelineData.map((p) => p.count), 1);
 
   if (loading) {

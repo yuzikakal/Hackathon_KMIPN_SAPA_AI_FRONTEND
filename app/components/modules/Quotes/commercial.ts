@@ -1,4 +1,11 @@
-import { Product, Quote, QuoteItem, QuoteTemplate } from '../../../types';
+import {
+  PriceBook,
+  PriceBookItem,
+  Product,
+  Quote,
+  QuoteItem,
+  QuoteTemplate,
+} from '../../../types';
 
 export interface ProductFormValues {
   name: string;
@@ -7,7 +14,25 @@ export interface ProductFormValues {
   category: string;
   unitPrice: string;
   currency: string;
+  files: Array<{
+    fileUrl: string;
+    fileName: string;
+  }>;
   isActive: boolean;
+}
+
+export interface PriceBookFormValues {
+  name: string;
+  currency: string;
+  description: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface PriceBookItemFormValues {
+  productId: string;
+  minQuantity: string;
+  unitPrice: string;
 }
 
 export interface TemplateLineFormValues {
@@ -50,32 +75,129 @@ export const emptyProductForm = (): ProductFormValues => ({
   category: '',
   unitPrice: '0',
   currency: 'IDR',
+  files: [],
   isActive: true,
 });
 
-export const productToForm = (product: Product): ProductFormValues => ({
-  name: product.name,
-  sku: product.sku || '',
-  description: product.description || '',
-  category: product.category || '',
-  unitPrice: String(product.unit_price),
-  currency: product.currency,
-  isActive: product.is_active,
-});
+export const productToForm = (product: Product): ProductFormValues => {
+  const files = product.files?.length
+    ? product.files.map((file) => ({
+      fileUrl: file.file_url,
+      fileName: file.file_name,
+    }))
+    : product.file_url
+      ? [{
+        fileUrl: product.file_url,
+        fileName: product.file_name || 'Product attachment',
+      }]
+      : [];
+  return {
+    name: product.name,
+    sku: product.sku || '',
+    description: product.description || '',
+    category: product.category || '',
+    unitPrice: String(product.unit_price),
+    currency: product.currency,
+    files,
+    isActive: product.is_active,
+  };
+};
 
 export const buildProductPayload = (
   values: ProductFormValues,
   includeStatus: boolean
+) => {
+  const files = values.files.map((file) => ({
+    file_url: file.fileUrl,
+    file_name: file.fileName,
+  }));
+  return {
+    name: values.name.trim(),
+    sku: includeStatus ? values.sku.trim() : optionalText(values.sku),
+    description: includeStatus
+      ? values.description.trim()
+      : optionalText(values.description),
+    category: includeStatus ? values.category.trim() : optionalText(values.category),
+    unit_price: Number(values.unitPrice),
+    currency: values.currency.trim().toUpperCase(),
+    files,
+    file_url: files[0]?.file_url || null,
+    file_name: files[0]?.file_name || null,
+    ...(includeStatus ? { is_active: values.isActive } : {}),
+  };
+};
+
+export const emptyPriceBookForm = (): PriceBookFormValues => ({
+  name: '',
+  currency: 'IDR',
+  description: '',
+  isDefault: false,
+  isActive: true,
+});
+
+export const priceBookToForm = (priceBook: PriceBook): PriceBookFormValues => ({
+  name: priceBook.name,
+  currency: priceBook.currency,
+  description: priceBook.description || '',
+  isDefault: priceBook.is_default,
+  isActive: priceBook.is_active,
+});
+
+export const buildPriceBookPayload = (
+  values: PriceBookFormValues,
+  includeStatus: boolean
 ) => ({
   name: values.name.trim(),
-  sku: includeStatus ? values.sku.trim() : optionalText(values.sku),
+  currency: values.currency.trim().toUpperCase(),
   description: includeStatus
     ? values.description.trim()
     : optionalText(values.description),
-  category: includeStatus ? values.category.trim() : optionalText(values.category),
-  unit_price: Number(values.unitPrice),
-  currency: values.currency.trim().toUpperCase(),
+  is_default: values.isDefault,
   ...(includeStatus ? { is_active: values.isActive } : {}),
+});
+
+export const upsertPriceBook = (
+  priceBooks: PriceBook[],
+  incoming: PriceBook
+): PriceBook[] => {
+  const normalized = incoming.is_default
+    ? priceBooks.map((priceBook) => (
+      priceBook.id === incoming.id
+        ? priceBook
+        : { ...priceBook, is_default: false }
+    ))
+    : priceBooks;
+  const exists = normalized.some((priceBook) => priceBook.id === incoming.id);
+  const next = exists
+    ? normalized.map((priceBook) => priceBook.id === incoming.id ? incoming : priceBook)
+    : [incoming, ...normalized];
+  return next.sort((left, right) => (
+    Number(right.is_default) - Number(left.is_default)
+    || left.name.localeCompare(right.name)
+  ));
+};
+
+export const emptyPriceBookItemForm = (): PriceBookItemFormValues => ({
+  productId: '',
+  minQuantity: '1',
+  unitPrice: '0',
+});
+
+export const priceBookItemToForm = (
+  item: PriceBookItem
+): PriceBookItemFormValues => ({
+  productId: String(item.product_id),
+  minQuantity: String(item.min_quantity),
+  unitPrice: String(item.unit_price),
+});
+
+export const buildPriceBookItemPayload = (
+  values: PriceBookItemFormValues,
+  includeProduct: boolean
+) => ({
+  ...(includeProduct ? { product_id: Number(values.productId) } : {}),
+  min_quantity: Number(values.minQuantity),
+  unit_price: Number(values.unitPrice),
 });
 
 export const emptyTemplateLine = (): TemplateLineFormValues => ({

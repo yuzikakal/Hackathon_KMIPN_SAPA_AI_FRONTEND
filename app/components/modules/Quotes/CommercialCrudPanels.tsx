@@ -3,12 +3,17 @@
 import React, { useState } from 'react';
 import {
   FiEdit2,
+  FiFile,
+  FiPaperclip,
   FiPlus,
   FiSave,
   FiTrash2,
-  FiX,
 } from 'react-icons/fi';
-import { apiFetch } from '../../../lib/api';
+import {
+  apiFetch,
+  apiUpload,
+  resolveApiAssetUrl,
+} from '../../../lib/api';
 import {
   Product,
   QuoteTemplate,
@@ -25,11 +30,26 @@ import {
   QuoteTemplateFormValues,
   templateToForm,
 } from './commercial';
+import { ConfirmDeleteModal, CrudModal } from './CrudModal';
 
 type Feedback = (message: string, failed?: boolean) => void;
 
 const fieldClass =
   'w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 focus:border-blue-600 focus:outline-none';
+
+const getProductFiles = (product: Product) => (
+  product.files?.length
+    ? product.files
+    : product.file_url
+      ? [{
+        id: -product.id,
+        product_id: product.id,
+        file_url: product.file_url,
+        file_name: product.file_name || 'Product attachment',
+        created_at: null,
+      }]
+      : []
+);
 
 interface ProductManagerProps {
   products: Product[];
@@ -51,16 +71,20 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
   const [form, setForm] = useState<ProductFormValues>(emptyProductForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyProductForm());
+    setPendingFiles([]);
     setFormOpen(true);
   };
 
   const openEdit = (product: Product) => {
     setEditingId(product.id);
     setForm(productToForm(product));
+    setPendingFiles([]);
     setFormOpen(true);
   };
 
@@ -69,18 +93,43 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
     if (saving) return;
     setSaving(true);
     try {
+      let values = form;
+      if (form.files.length + pendingFiles.length > 20) {
+        throw new Error('Satu product maksimal memiliki 20 lampiran.');
+      }
+      if (pendingFiles.some((file) => file.size > 10 * 1024 * 1024)) {
+          throw new Error('Ukuran lampiran product maksimal 10 MB.');
+      }
+      if (pendingFiles.length > 0) {
+        const uploadedFiles = await Promise.all(
+          pendingFiles.map(async (file) => {
+            const uploaded = await apiUpload(file, { silentError: true });
+            return {
+              fileUrl: uploaded.url,
+              fileName: uploaded.filename || file.name,
+            };
+          })
+        );
+        values = {
+          ...form,
+          files: [...form.files, ...uploadedFiles],
+        };
+        setForm(values);
+        setPendingFiles([]);
+      }
       const endpoint = editingId
         ? `/api/v1/products/${editingId}`
         : '/api/v1/products';
       const savedProduct = await apiFetch<Product>(endpoint, {
         method: editingId ? 'PUT' : 'POST',
         silentError: true,
-        body: JSON.stringify(buildProductPayload(form, editingId !== null)),
+        body: JSON.stringify(buildProductPayload(values, editingId !== null)),
       });
       onSaved(savedProduct);
       onFeedback(editingId ? 'Product berhasil diperbarui.' : 'Product berhasil ditambahkan.');
       setFormOpen(false);
       setEditingId(null);
+      setPendingFiles([]);
     } catch (error) {
       onFeedback(
         error instanceof Error ? error.message : 'Product tidak dapat disimpan.',
@@ -92,7 +141,6 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
   };
 
   const handleDelete = async (product: Product) => {
-    if (!window.confirm(`Hapus product "${product.name}"?`)) return;
     setDeletingId(product.id);
     try {
       await apiFetch<void>(`/api/v1/products/${product.id}`, {
@@ -101,6 +149,7 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
       });
       onDeleted(product.id);
       onFeedback('Product berhasil dihapus.');
+      setDeleteTarget(null);
     } catch (error) {
       onFeedback(
         error instanceof Error ? error.message : 'Product tidak dapat dihapus.',
@@ -128,23 +177,14 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
       </div>
 
       {formOpen && (
-        <form
-          onSubmit={handleSave}
-          className="grid grid-cols-1 gap-3 rounded-xl border border-blue-800/40 bg-blue-950/10 p-4 md:grid-cols-2"
+        <CrudModal
+          open={formOpen}
+          title={editingId ? 'Edit Product' : 'Product baru'}
+          onClose={() => setFormOpen(false)}
+          closeDisabled={saving}
+          maxWidth="2xl"
         >
-          <div className="flex items-center justify-between md:col-span-2">
-            <h3 className="text-xs font-bold text-blue-300">
-              {editingId ? 'Edit product' : 'Product baru'}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              aria-label="Tutup form product"
-              className="text-slate-400 hover:text-white"
-            >
-              <FiX />
-            </button>
-          </div>
+          <form onSubmit={handleSave} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={form.name}
             onChange={(event) =>
@@ -205,6 +245,67 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
             rows={2}
             className={`${fieldClass} md:col-span-2`}
           />
+          <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 md:col-span-2">
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 px-3 py-4 text-xs text-slate-300 hover:border-blue-600 hover:text-blue-300">
+              <FiPaperclip />
+              <span>
+                Tambah lampiran ({form.files.length + pendingFiles.length}/20, maks. 10 MB/file)
+              </span>
+              <input
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={(event) => {
+                  const selected = Array.from(event.target.files || []);
+                  setPendingFiles((current) => [...current, ...selected]);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+            <div className="max-h-36 space-y-1.5 overflow-y-auto">
+              {form.files.map((file, index) => (
+                <div
+                  key={`${file.fileUrl}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-slate-900 px-3 py-2 text-[11px]"
+                >
+                  <span className="min-w-0 truncate text-slate-300">{file.fileName}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        files: current.files.filter((_, fileIndex) => fileIndex !== index),
+                      }))
+                    }
+                    className="shrink-0 text-rose-300 hover:text-rose-200"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ))}
+              {pendingFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${file.size}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-blue-900/50 bg-blue-950/20 px-3 py-2 text-[11px]"
+                >
+                  <span className="min-w-0 truncate text-blue-200">
+                    {file.name} · menunggu upload
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPendingFiles((current) =>
+                        current.filter((_, fileIndex) => fileIndex !== index)
+                      )
+                    }
+                    className="shrink-0 text-rose-300 hover:text-rose-200"
+                  >
+                    Batal
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
           {editingId && (
             <label className="flex items-center gap-2 text-xs text-slate-300">
               <input
@@ -224,7 +325,8 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
           >
             <FiSave /> {saving ? 'Menyimpan...' : 'Simpan Product'}
           </button>
-        </form>
+          </form>
+        </CrudModal>
       )}
 
       <div className="grid max-h-[430px] grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2">
@@ -273,13 +375,29 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => void handleDelete(product)}
+                onClick={() => setDeleteTarget(product)}
                 disabled={deletingId === product.id}
                 className="flex items-center gap-1 rounded-lg border border-rose-900/70 px-2.5 py-1.5 text-[10px] text-rose-300 disabled:opacity-50"
               >
                 <FiTrash2 /> {deletingId === product.id ? 'Menghapus...' : 'Hapus'}
               </button>
             </div>
+            {getProductFiles(product).length > 0 && (
+              <div className="mt-3 max-h-28 space-y-1.5 overflow-y-auto">
+                {getProductFiles(product).map((file) => (
+                  <a
+                    key={file.id}
+                    href={resolveApiAssetUrl(file.file_url) || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-[10px] text-blue-300 hover:border-blue-700"
+                  >
+                    <FiFile className="shrink-0" />
+                    <span className="truncate">{file.file_name}</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </article>
         ))}
         {!loading && products.length === 0 && (
@@ -288,6 +406,15 @@ export const ProductCatalogManager: React.FC<ProductManagerProps> = ({
           </p>
         )}
       </div>
+      <ConfirmDeleteModal
+        open={deleteTarget !== null}
+        subject={deleteTarget ? `product "${deleteTarget.name}"` : 'product'}
+        deleting={deletingId !== null}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
+      />
     </section>
   );
 };
@@ -313,6 +440,7 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<QuoteTemplate | null>(null);
 
   const openCreate = () => {
     setEditingId(null);
@@ -397,7 +525,6 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
   };
 
   const handleDelete = async (template: QuoteTemplate) => {
-    if (!window.confirm(`Hapus Quote Template "${template.name}"?`)) return;
     setDeletingId(template.id);
     try {
       await apiFetch<void>(`/api/v1/quote-templates/${template.id}`, {
@@ -406,6 +533,7 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
       });
       onDeleted(template.id);
       onFeedback('Quote Template berhasil dihapus.');
+      setDeleteTarget(null);
     } catch (error) {
       onFeedback(
         error instanceof Error ? error.message : 'Quote Template tidak dapat dihapus.',
@@ -433,23 +561,14 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
       </div>
 
       {formOpen && (
-        <form
-          onSubmit={handleSave}
-          className="space-y-3 rounded-xl border border-indigo-800/50 bg-indigo-950/10 p-4"
+        <CrudModal
+          open={formOpen}
+          title={editingId ? 'Edit Quote Template' : 'Quote Template baru'}
+          onClose={() => setFormOpen(false)}
+          closeDisabled={saving}
+          maxWidth="4xl"
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-indigo-300">
-              {editingId ? 'Edit Quote Template' : 'Quote Template baru'}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              aria-label="Tutup form Quote Template"
-              className="text-slate-400 hover:text-white"
-            >
-              <FiX />
-            </button>
-          </div>
+          <form onSubmit={handleSave} className="space-y-3">
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             <input
               value={form.name}
@@ -621,7 +740,8 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
           >
             <FiSave /> {saving ? 'Menyimpan...' : 'Simpan Quote Template'}
           </button>
-        </form>
+          </form>
+        </CrudModal>
       )}
 
       <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
@@ -659,7 +779,7 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(template)}
+                  onClick={() => setDeleteTarget(template)}
                   disabled={deletingId === template.id}
                   aria-label={`Hapus ${template.name}`}
                   className="rounded p-1.5 text-rose-400 hover:bg-rose-950"
@@ -676,6 +796,15 @@ export const QuoteTemplateManager: React.FC<QuoteTemplateManagerProps> = ({
           </p>
         )}
       </div>
+      <ConfirmDeleteModal
+        open={deleteTarget !== null}
+        subject={deleteTarget ? `Quote Template "${deleteTarget.name}"` : 'Quote Template'}
+        deleting={deletingId !== null}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
+      />
     </>
   );
 };

@@ -7,7 +7,6 @@ import {
   FiPlus,
   FiSave,
   FiTrash2,
-  FiX,
 } from 'react-icons/fi';
 import { apiFetch } from '../../../lib/api';
 import { Deal, Product, Quote, QuoteItem } from '../../../types';
@@ -19,6 +18,7 @@ import {
   quoteToForm,
   SalesQuoteFormValues,
 } from './commercial';
+import { ConfirmDeleteModal, CrudModal } from './CrudModal';
 
 type Feedback = (message: string, failed?: boolean) => void;
 
@@ -82,6 +82,7 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const [loadingEditId, setLoadingEditId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Quote | null>(null);
 
   const totals = useMemo(() => calculateSalesQuoteTotals(form), [form]);
   const dealNames = useMemo(
@@ -169,7 +170,6 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
   };
 
   const handleDelete = async (quote: Quote) => {
-    if (!window.confirm(`Hapus sales quote "${quote.quote_number}"?`)) return;
     setDeletingId(quote.id);
     try {
       await apiFetch<void>(`/api/v1/quotes/${quote.id}`, {
@@ -178,6 +178,7 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
       });
       onDeleted(quote.id);
       onFeedback(`Sales quote ${quote.quote_number} berhasil dihapus.`);
+      setDeleteTarget(null);
       if (editingId === quote.id) {
         setEditingId(null);
         setFormOpen(false);
@@ -212,23 +213,14 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
       </div>
 
       {formOpen && (
-        <form
-          onSubmit={handleSave}
-          className="space-y-3 rounded-xl border border-blue-800/40 bg-blue-950/10 p-4"
+        <CrudModal
+          open={formOpen}
+          title={editingId ? 'Edit Sales Quote' : 'Sales Quote baru'}
+          onClose={() => setFormOpen(false)}
+          closeDisabled={saving}
+          maxWidth="4xl"
         >
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xs font-bold text-blue-300">
-              {editingId ? 'Edit Sales Quote' : 'Sales Quote baru'}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              aria-label="Tutup form Sales Quote"
-              className="text-slate-400 hover:text-white"
-            >
-              <FiX />
-            </button>
-          </div>
+          <form onSubmit={handleSave} className="space-y-3">
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <select
@@ -439,7 +431,8 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
           >
             <FiSave /> {saving ? 'Menyimpan...' : 'Simpan Sales Quote'}
           </button>
-        </form>
+          </form>
+        </CrudModal>
       )}
 
       <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
@@ -475,7 +468,7 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleDelete(quote)}
+                  onClick={() => setDeleteTarget(quote)}
                   disabled={deletingId === quote.id}
                   aria-label={`Hapus ${quote.quote_number}`}
                   className="rounded p-1.5 text-rose-400 hover:bg-rose-950 disabled:opacity-40"
@@ -512,6 +505,15 @@ export const SalesQuoteManager: React.FC<SalesQuoteManagerProps> = ({
           </p>
         )}
       </div>
+      <ConfirmDeleteModal
+        open={deleteTarget !== null}
+        subject={deleteTarget ? `Sales Quote "${deleteTarget.quote_number}"` : 'Sales Quote'}
+        deleting={deletingId !== null}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget);
+        }}
+      />
     </section>
   );
 };

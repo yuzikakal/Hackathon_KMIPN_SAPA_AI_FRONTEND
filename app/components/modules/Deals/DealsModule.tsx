@@ -1104,8 +1104,8 @@ export const DealsModule: React.FC = () => {
 
                   {(aiSummary || aiSummaryError) && (
                     <div className={`max-h-44 overflow-y-auto rounded-xl border p-3 text-xs ${aiSummaryError
-                        ? 'border-rose-800/60 bg-rose-950/40 text-rose-200'
-                        : 'border-violet-800/60 bg-violet-950/30 text-slate-200'
+                      ? 'border-rose-800/60 bg-rose-950/40 text-rose-200'
+                      : 'border-violet-800/60 bg-violet-950/30 text-slate-200'
                       }`}>
                       {aiSummaryError ? (
                         <p>{aiSummaryError}</p>

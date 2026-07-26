@@ -186,7 +186,18 @@ export interface Product extends Timestamped {
   category: string | null;
   unit_price: number;
   currency: string;
+  file_url: string | null;
+  file_name: string | null;
+  files: ProductFile[];
   is_active: boolean;
+}
+
+export interface ProductFile {
+  id: number;
+  product_id: number;
+  file_url: string;
+  file_name: string;
+  created_at: string | null;
 }
 
 export interface QuoteItem {
